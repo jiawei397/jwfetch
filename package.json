@@ -4,7 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "release": "rimraf ./dist && tsc"
+    "release": "rimraf ./dist && tsc",
+    "prepublish": "npm version patch && npm run release"
   },
   "keywords": [],
   "author": "",
