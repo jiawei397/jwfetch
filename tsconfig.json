@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": false,
+    "target": "esnext",
+    "sourceMap": false,
+    "rootDir": ".",
+    "outDir": "./dist/",
+    "incremental": true
+  }
+}
