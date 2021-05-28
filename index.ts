@@ -162,7 +162,7 @@ export class BaseAjax {
    * 提示错误，可以配置不提示
    */
   private showMessage(msg: string, config?: AjaxConfig) {
-    if (config?.isNoAlert) {
+    if (config && config.isNoAlert) {
       return;
     }
     if (!msg) {
