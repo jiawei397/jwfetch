@@ -26,5 +26,6 @@ export class Ajax extends BaseAjax {
 Ajax.defaults.baseURL = "/api";
 
 export const ajax = new Ajax();
-export const get = ajax.get;
-export const post = ajax.post;
+export const get = ajax.get.bind(ajax);
+export const post = ajax.post.bind(ajax);
+
