@@ -26,8 +26,8 @@ export type Credentials = "omit" | "include" | "same-origin";
 
 export type Mode = "same-origin" | "cors" | "no-cors";
 
-export type AbortResult = {
-  promise: Promise<any>;
+export type AbortResult<T> = {
+  promise: Promise<T>;
   abort: () => void;
 };
 
@@ -373,7 +373,7 @@ export class BaseAjax {
   /**
    * 调用ajax的同时，返回取消ajax请求的方法
    */
-  ajaxAbortResult<T>(cfg: AjaxConfig): AbortResult {
+  ajaxAbortResult<T>(cfg: AjaxConfig): AbortResult<T> {
     const { isOutStop } = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       const promise = Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
@@ -384,7 +384,7 @@ export class BaseAjax {
     }
     const result = this.cache_ajax(cfg);
     return {
-      promise: result.promise as Promise<T>,
+      promise: result.promise,
       abort: () => {
         return this.abort(result.controller);
       },
