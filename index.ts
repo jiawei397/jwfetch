@@ -1,4 +1,4 @@
-import { join } from "path";
+import {join} from "path";
 
 export type Method =
   | "get"
@@ -34,6 +34,7 @@ export type AbortResult<T> = {
 export type CacheResult = {
   promise: Promise<any>;
   controller: AbortController;
+  config: AjaxConfig;
 };
 
 export interface RequestConfig {
@@ -132,7 +133,9 @@ export class BaseAjax {
    */
   abortAll() {
     for (const cache of this.caches.values()) {
-      this.abort(cache.controller);
+      if (!cache.config.isOutStop) { // 如果是要跳出停止处理的，就不能给取消了
+        this.abort(cache.controller);
+      }
     }
   }
 
@@ -330,12 +333,13 @@ export class BaseAjax {
    * 缓存请求，同一时间同一请求只会向后台发送一次
    */
   private cache_ajax(cfg: AjaxConfig): CacheResult {
-    const { signal, isNoCache } = cfg;
+    const {signal, isNoCache} = cfg;
     const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
     if (isNoCache) {
       const controller = this.mergeAbortConfig(cfg, signal);
       return {
         promise: this.request(config),
+        config,
         controller,
       };
     }
@@ -352,6 +356,7 @@ export class BaseAjax {
       });
       caches.set(uniqueKey, {
         promise: this.fetch_timeout(promise, controller, config),
+        config,
         controller,
       });
     }
@@ -362,7 +367,7 @@ export class BaseAjax {
    * ajax主方法，返回promise
    */
   ajax<T>(cfg: AjaxConfig): Promise<T> {
-    const { isOutStop } = cfg;
+    const {isOutStop} = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       return Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
     }
@@ -374,12 +379,13 @@ export class BaseAjax {
    * 调用ajax的同时，返回取消ajax请求的方法
    */
   ajaxAbortResult<T>(cfg: AjaxConfig): AbortResult<T> {
-    const { isOutStop } = cfg;
+    const {isOutStop} = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       const promise = Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
       return {
         promise,
-        abort: () => {},
+        abort: () => {
+        },
       };
     }
     const result = this.cache_ajax(cfg);
