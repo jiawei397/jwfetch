@@ -28,7 +28,7 @@ export class Ajax extends BaseAjax {
     );
     if (response.status === 401) { //权限问题
       this.stopAjax();
-      this.cancelAll();
+      this.abortAll();
       // toLogin();
     }
   }
