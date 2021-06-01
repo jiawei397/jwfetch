@@ -400,8 +400,32 @@ export class BaseAjax {
     });
   }
 
+  /**
+   * 调用ajax的get请求的同时，返回取消ajax请求的方法
+   */
+  getAbortResult<T>(url: string, data?: any, options?: AjaxExConfig) {
+    return this.ajaxAbortResult<T>({
+      url,
+      method: "get",
+      data,
+      ...options,
+    });
+  }
+
   post<T>(url: string, data?: any, options?: AjaxExConfig) {
     return this.ajax<T>({
+      url,
+      method: "post",
+      data,
+      ...options,
+    });
+  }
+
+  /**
+   * 调用ajax的post请求同时，返回取消ajax请求的方法
+   */
+  postAbortResult<T>(url: string, data?: any, options?: AjaxExConfig) {
+    return this.ajaxAbortResult<T>({
       url,
       method: "post",
       data,
