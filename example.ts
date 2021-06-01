@@ -28,4 +28,3 @@ Ajax.defaults.baseURL = "/api";
 export const ajax = new Ajax();
 export const get = ajax.get.bind(ajax);
 export const post = ajax.post.bind(ajax);
-
