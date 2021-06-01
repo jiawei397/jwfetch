@@ -1,4 +1,4 @@
-import { join } from "path";
+import {join} from "path";
 
 export type Method =
   | "get"
@@ -25,6 +25,11 @@ export type Method =
 export type Credentials = "omit" | "include" | "same-origin";
 
 export type Mode = "same-origin" | "cors" | "no-cors";
+
+export type AbortResult = {
+  promise: Promise<any>;
+  abort: () => void;
+}
 
 export interface RequestConfig {
   url?: string;
@@ -63,12 +68,17 @@ export interface AjaxExConfig extends RequestConfig {
   isEncodeUrl?: boolean; //get请求时是否要进行浏览器编码
   isOutStop?: boolean;
   /**
-   * 主动控制取消请求时可传递此参数，例如：
+   * 主动控制取消请求时可传递此参数，或者使用isReturnAbort。例如：
    *
    *    const controller = new AbortController();
    *    const {signal} = controller;
    */
   signal?: AbortSignal;
+
+  /**
+   * 主动控制取消请求时可传递此参数，将返回AbortResult类型数据
+   */
+  isReturnAbort?: boolean;
 }
 
 export interface AjaxConfig extends AjaxExConfig {
@@ -124,42 +134,6 @@ export class BaseAjax {
     for (const cache of this.caches.values()) {
       this.abort(cache.controller);
     }
-  }
-
-  /**
-   * 缓存请求，同一时间同一请求只会向后台发送一次
-   * @param {Object} cfg
-   */
-  ajax(cfg: AjaxConfig) {
-    const { isOutStop, signal, isNoCache } = cfg;
-    if (!isOutStop && this.isAjaxStopped()) {
-      return Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
-    }
-    const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
-    if (isNoCache) {
-      return this.request(config);
-    }
-    const uniqueKey = this.getUniqueKey(config);
-    const caches = this.caches;
-    if (!caches.has(uniqueKey)) {
-      let controller;
-      if (typeof window.AbortController === "function" && signal === undefined) { // 如果要自己控制取消请求，需要自己传递signal
-        controller = new AbortController();
-        config.signal = controller.signal;
-      }
-      const promise = this.request(config).then((result) => {
-        caches.delete(uniqueKey);
-        return result;
-      }, (err) => {
-        caches.delete(uniqueKey);
-        return Promise.reject(err);
-      });
-      caches.set(uniqueKey, {
-        promise: this.fetch_timeout(promise, controller, config),
-        controller: controller,
-      });
-    }
-    return caches.get(uniqueKey).promise;
   }
 
   /**
@@ -339,6 +313,53 @@ export class BaseAjax {
       return res;
     });
   }
+
+  /**
+   * 缓存请求，同一时间同一请求只会向后台发送一次
+   */
+  ajax(cfg: AjaxConfig): Promise<any> | AbortResult{
+    const {isOutStop, signal, isNoCache, isReturnAbort} = cfg;
+    if (!isOutStop && this.isAjaxStopped()) {
+      return Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
+    }
+    const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
+    if (isNoCache) {
+      return this.request(config);
+    }
+    const uniqueKey = this.getUniqueKey(config);
+    const caches = this.caches;
+    if (!caches.has(uniqueKey)) {
+      let controller;
+      if (typeof window.AbortController === "function" && signal === undefined) { // 如果要自己控制取消请求，需要自己传递signal，或者使用isReturnAbort参数
+        controller = new AbortController();
+        config.signal = controller.signal;
+      }
+      const promise = this.request(config).then((result) => {
+        caches.delete(uniqueKey);
+        return result;
+      }, (err) => {
+        caches.delete(uniqueKey);
+        return Promise.reject(err);
+      });
+      caches.set(uniqueKey, {
+        promise: this.fetch_timeout(promise, controller, config),
+        controller: controller,
+      });
+    }
+
+    const map = caches.get(uniqueKey);
+    if (isReturnAbort) {
+      return {
+        promise: map.promise,
+        abort: () => {
+          return this.abort(map.controller);
+        }
+      };
+    } else {
+      return caches.get(uniqueKey).promise;
+    }
+  }
+
 
   get(url: string, data?: any, options?: AjaxExConfig) {
     return this.ajax({
