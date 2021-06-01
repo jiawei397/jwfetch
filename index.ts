@@ -62,6 +62,12 @@ export interface AjaxExConfig extends RequestConfig {
   isUseOrigin?: boolean; // 为true时，直接返回response，不再处理结果
   isEncodeUrl?: boolean; //get请求时是否要进行浏览器编码
   isOutStop?: boolean;
+  /**
+   * 主动控制取消请求时可传递此参数，例如：
+   *
+   *    const controller = new AbortController();
+   *    const {signal} = controller;
+   */
   signal?: AbortSignal;
 }
 
@@ -105,7 +111,7 @@ export class BaseAjax {
    * 取消接口请求
    * @param controller 取消控制器
    */
-  cancel(controller: AbortController | undefined) {
+  abort(controller: AbortController | undefined) {
     if (controller) {
       controller.abort();
     }
@@ -114,9 +120,9 @@ export class BaseAjax {
   /**
    * 取消所有接口请求
    */
-  cancelAll() {
+  abortAll() {
     for (const cache of this.caches.values()) {
-      this.cancel(cache.controller);
+      this.abort(cache.controller);
     }
   }
 
@@ -133,13 +139,11 @@ export class BaseAjax {
     if (isNoCache) {
       return this.request(config);
     }
-    const isCanAbort = signal === undefined &&
-      typeof window.AbortController === "function"; //是否可以取消
     const uniqueKey = this.getUniqueKey(config);
     const caches = this.caches;
     if (!caches.has(uniqueKey)) {
       let controller;
-      if (isCanAbort) {
+      if (typeof window.AbortController === "function" && signal === undefined) { // 如果要自己控制取消请求，需要自己传递signal
         controller = new AbortController();
         config.signal = controller.signal;
       }
@@ -287,8 +291,7 @@ export class BaseAjax {
       //以下处理成功的结果
       return response.json();
     } catch (err) { //代表网络异常
-      if (err.name === "AbortError") { //属于主动取消的
-      } else {
+      if (!this.isAbortError(err)) { //不属于主动取消的，需要进行提示
         this.showMessage(err, config);
       }
       return Promise.reject(err);
@@ -302,6 +305,10 @@ export class BaseAjax {
     console.error(
       `HTTP error, status = ${response.status}, statusText = ${response.statusText}`,
     );
+  }
+
+  isAbortError(err: Error) {
+    return err.name === 'AbortError';
   }
 
   /**
@@ -319,7 +326,7 @@ export class BaseAjax {
     const timeout = config.timeout;
     const abortPromise = new Promise((resolve, reject) => {
       tp = setTimeout(() => {
-        this.cancel(controller);
+        this.abort(controller);
         reject({
           code: config.timeoutErrorStatus,
           message: config.timeoutErrorMessage,
