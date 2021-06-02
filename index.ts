@@ -33,8 +33,8 @@ export type AbortResult<T> = {
 
 export type CacheResult = {
   promise: Promise<any>;
-  controller: AbortController;
   config: AjaxConfig;
+  controller?: AbortController;
 };
 
 export interface RequestConfig {
@@ -88,6 +88,26 @@ export interface AjaxConfig extends AjaxExConfig {
   data?: FormData | any;
 }
 
+type RequestCallback = (config: AjaxConfig) => AjaxConfig;
+
+type ErrorCallback = (error: Error) => Promise<Error>;
+
+type ResponseCallback = (data: any) => Promise<any>;
+
+class Interceptors<T> {
+  public chain: any[];
+  constructor() {
+    this.chain = [];
+  }
+  use(callback: T, errorCallback: ErrorCallback) {
+    this.chain.push(callback, errorCallback);
+    return this.chain.length - 2;
+  }
+  eject(index: number) {
+    this.chain.splice(index, 2);
+  }
+}
+
 export class BaseAjax {
   static defaults: AjaxExConfig = {
     credentials: "include",
@@ -98,6 +118,11 @@ export class BaseAjax {
     stoppedErrorMessage: "Ajax has been stopped! ",
     method: "POST",
   };
+
+  public interceptors = {
+    request: new Interceptors<RequestCallback>(),
+    response: new Interceptors<ResponseCallback>()
+  }
 
   public caches = new Map(); // 缓存所有已经请求的Promise，同一时间重复的不再请求
   private IS_AJAX_STOP = false;
@@ -299,7 +324,7 @@ export class BaseAjax {
     controller: AbortController | undefined,
     config: AjaxConfig,
   ) {
-    let tp;
+    let tp: any;
     const timeout = config.timeout;
     const abortPromise = new Promise((resolve, reject) => {
       tp = setTimeout(() => {
@@ -319,8 +344,8 @@ export class BaseAjax {
 
   private mergeAbortConfig(
     config: AjaxConfig,
-    signal: AbortSignal,
-  ): AbortController {
+    signal?: AbortSignal,
+  ): AbortController | undefined {
     let controller;
     if (typeof window.AbortController === "function" && signal === undefined) { // 如果要自己控制取消请求，需要自己传递signal，或者使用isReturnAbort参数
       controller = new AbortController();
@@ -329,16 +354,43 @@ export class BaseAjax {
     return controller;
   }
 
+  mergeConfig(cfg: AjaxConfig) {
+    const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
+    const chain = this.interceptors.request.chain;
+    let callback;
+    let errCallback;
+    while (callback = chain.shift()) {
+      try {
+        errCallback = chain.shift();
+        callback(config);
+      } catch (e) {
+        console.error(e);
+        errCallback(e); // TODO 这个作用没想好
+        break;
+      }
+    }
+    return config;
+  }
+
+  mergeResponse(promise: Promise<any>) {
+    const chain = this.interceptors.response.chain;
+    while (chain.length) {
+      promise = promise.then(chain.shift(), chain.shift());
+    }
+    return promise;
+  }
+
   /**
    * 缓存请求，同一时间同一请求只会向后台发送一次
    */
   private cache_ajax(cfg: AjaxConfig): CacheResult {
-    const {signal, isNoCache} = cfg;
-    const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
+    const config = this.mergeConfig(cfg);
+    const {signal, isNoCache} = config;
     if (isNoCache) {
-      const controller = this.mergeAbortConfig(cfg, signal);
+      const controller = this.mergeAbortConfig(config, signal);
+      const promise = this.request(config);
       return {
-        promise: this.request(config),
+        promise: this.mergeResponse(promise),
         config,
         controller,
       };
@@ -346,16 +398,17 @@ export class BaseAjax {
     const uniqueKey = this.getUniqueKey(config);
     const caches = this.caches;
     if (!caches.has(uniqueKey)) {
-      const controller = this.mergeAbortConfig(cfg, signal);
-      const promise = this.request(config).then((result) => {
+      const controller = this.mergeAbortConfig(config, signal);
+      const temp = this.request(config).then((result) => {
         caches.delete(uniqueKey);
         return result;
       }, (err) => {
         caches.delete(uniqueKey);
         return Promise.reject(err);
       });
+      const promise = this.fetch_timeout(temp, controller, config);
       caches.set(uniqueKey, {
-        promise: this.fetch_timeout(promise, controller, config),
+        promise: this.mergeResponse(promise),
         config,
         controller,
       });

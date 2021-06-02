@@ -40,4 +40,19 @@ export const ajax = new Ajax();
 export const get = ajax.get.bind(ajax);
 export const post = ajax.post.bind(ajax);
 
+// 请求拦截
+ajax.interceptors.request.use(function(config) {
+  config.headers = config.headers || {};
+  config.headers.token = "abcd";
+  return config;
+}, function(err)  {
+  return Promise.reject(err);
+});
+
+// 失败拦截
+ajax.interceptors.response.use(function(data) {
+  return data.slice(0, 10);
+}, function(err)  {
+  return Promise.reject(err);
+});
 ```
