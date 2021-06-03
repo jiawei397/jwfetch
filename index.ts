@@ -1,4 +1,4 @@
-import {join} from "path";
+import { join } from "path";
 
 export type Method =
   | "get"
@@ -121,8 +121,8 @@ export class BaseAjax {
 
   public interceptors = {
     request: new Interceptors<RequestCallback>(),
-    response: new Interceptors<ResponseCallback>()
-  }
+    response: new Interceptors<ResponseCallback>(),
+  };
 
   public caches = new Map(); // 缓存所有已经请求的Promise，同一时间重复的不再请求
   private IS_AJAX_STOP = false;
@@ -273,6 +273,10 @@ export class BaseAjax {
         if (!headers["Content-Type"]) {
           headers["Content-Type"] = "application/x-www-form-urlencoded";
         }
+      } else {
+        if (!headers["Content-Type"]) {
+          headers["Content-Type"] = "application/json";
+        }
       }
     }
     try {
@@ -385,7 +389,7 @@ export class BaseAjax {
    */
   private cache_ajax(cfg: AjaxConfig): CacheResult {
     const config = this.mergeConfig(cfg);
-    const {signal, isNoCache} = config;
+    const { signal, isNoCache } = config;
     if (isNoCache) {
       const controller = this.mergeAbortConfig(config, signal);
       const promise = this.request(config);
@@ -420,7 +424,7 @@ export class BaseAjax {
    * ajax主方法，返回promise
    */
   ajax<T>(cfg: AjaxConfig): Promise<T> {
-    const {isOutStop} = cfg;
+    const { isOutStop } = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       return Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
     }
@@ -432,7 +436,7 @@ export class BaseAjax {
    * 调用ajax的同时，返回取消ajax请求的方法
    */
   ajaxAbortResult<T>(cfg: AjaxConfig): AbortResult<T> {
-    const {isOutStop} = cfg;
+    const { isOutStop } = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       const promise = Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
       return {
