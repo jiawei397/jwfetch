@@ -1,4 +1,4 @@
-import { join } from "path";
+import {join} from "path";
 
 export type Method =
   | "get"
@@ -80,6 +80,7 @@ export interface AjaxExConfig extends RequestConfig {
    *    const {signal} = controller;
    */
   signal?: AbortSignal;
+  cacheTimeout?: number; // 如果是-1，代表不清除缓存。
 }
 
 export interface AjaxConfig extends AjaxExConfig {
@@ -96,13 +97,16 @@ type ResponseCallback = (data: any) => Promise<any>;
 
 class Interceptors<T> {
   public chain: any[];
+
   constructor() {
     this.chain = [];
   }
+
   use(callback: T, errorCallback: ErrorCallback) {
     this.chain.push(callback, errorCallback);
     return this.chain.length - 2;
   }
+
   eject(index: number) {
     this.chain.splice(index, 2);
   }
@@ -384,12 +388,24 @@ export class BaseAjax {
     return promise;
   }
 
+  clearCacheByKey(uniqueKey: string, cacheTimeout?: number) {
+    if (cacheTimeout !== undefined) {
+      if (cacheTimeout >= 0) { // 如果小于0，不清除
+        setTimeout(() => {
+          this.caches.delete(uniqueKey);
+        }, cacheTimeout);
+      }
+    } else {
+      this.caches.delete(uniqueKey);
+    }
+  }
+
   /**
    * 缓存请求，同一时间同一请求只会向后台发送一次
    */
   private cache_ajax(cfg: AjaxConfig): CacheResult {
     const config = this.mergeConfig(cfg);
-    const { signal, isNoCache } = config;
+    const {signal, isNoCache} = config;
     if (isNoCache) {
       const controller = this.mergeAbortConfig(config, signal);
       const promise = this.request(config);
@@ -404,10 +420,10 @@ export class BaseAjax {
     if (!caches.has(uniqueKey)) {
       const controller = this.mergeAbortConfig(config, signal);
       const temp = this.request(config).then((result) => {
-        caches.delete(uniqueKey);
+        this.clearCacheByKey(uniqueKey, config.cacheTimeout);
         return result;
       }, (err) => {
-        caches.delete(uniqueKey);
+        this.clearCacheByKey(uniqueKey, config.cacheTimeout);
         return Promise.reject(err);
       });
       const promise = this.fetch_timeout(temp, controller, config);
@@ -424,7 +440,7 @@ export class BaseAjax {
    * ajax主方法，返回promise
    */
   ajax<T>(cfg: AjaxConfig): Promise<T> {
-    const { isOutStop } = cfg;
+    const {isOutStop} = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       return Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
     }
@@ -436,7 +452,7 @@ export class BaseAjax {
    * 调用ajax的同时，返回取消ajax请求的方法
    */
   ajaxAbortResult<T>(cfg: AjaxConfig): AbortResult<T> {
-    const { isOutStop } = cfg;
+    const {isOutStop} = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       const promise = Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
       return {
