@@ -69,7 +69,6 @@ export interface RequestConfig {
 export interface AjaxExConfig extends RequestConfig {
   isFile?: boolean; // 是否要传递文件
   isNoAlert?: boolean; // 是否要提示错误信息，默认提示
-  isNoCache?: boolean; // 是否缓存ajax，以避免同一时间重复请求，默认开启
   isUseOrigin?: boolean; // 为true时，直接返回response，不再处理结果
   isEncodeUrl?: boolean; //get请求时是否要进行浏览器编码
   isOutStop?: boolean;
@@ -80,7 +79,12 @@ export interface AjaxExConfig extends RequestConfig {
    *    const {signal} = controller;
    */
   signal?: AbortSignal;
-  cacheTimeout?: number; // 如果是-1，代表不清除缓存。
+  /**
+   * 如果是-1，代表不清除缓存
+   *
+   * 如果是0，代表不使用缓存
+   */
+  cacheTimeout?: number;
 }
 
 export interface AjaxConfig extends AjaxExConfig {
@@ -405,8 +409,8 @@ export class BaseAjax {
    */
   private cache_ajax(cfg: AjaxConfig): CacheResult {
     const config = this.mergeConfig(cfg);
-    const {signal, isNoCache} = config;
-    if (isNoCache) {
+    const {signal, cacheTimeout} = config;
+    if (cacheTimeout === 0) { // 不缓存结果
       const controller = this.mergeAbortConfig(config, signal);
       const promise = this.request(config);
       return {

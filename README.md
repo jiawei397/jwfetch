@@ -4,10 +4,11 @@
 
 - 同一时间段重复请求会被缓存过滤掉
 - timeout
-- 取消
+- 取消请求
 
 ## 使用
 
+### 封装ajax
 ``` ts
 import { BaseAjax } from "./index";
 
@@ -39,7 +40,10 @@ Ajax.defaults.baseURL = "/api";
 export const ajax = new Ajax();
 export const get = ajax.get.bind(ajax);
 export const post = ajax.post.bind(ajax);
+```
 
+### 拦截
+``` ts
 // 请求拦截
 ajax.interceptors.request.use(function(config) {
   config.headers = config.headers || {};
@@ -49,10 +53,22 @@ ajax.interceptors.request.use(function(config) {
   return Promise.reject(err);
 });
 
-// 失败拦截
+// 响应拦截
 ajax.interceptors.response.use(function(data) {
   return data.slice(0, 10);
 }, function(err)  {
   return Promise.reject(err);
 });
+```
+
+### 获取可取消的请求
+
+```ts 
+const {promise, abort}  = ajax.getAbortResult(url, data, options);
+promise.then((result) => console.log(result));
+abort(); // 取消请求
+
+const {promise2, abort2}  = ajax.postAbortResult(url, data, options);
+promise2.then((result) => console.log(result));
+abort2(); // 取消请求
 ```
