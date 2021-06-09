@@ -74,6 +74,17 @@ abort2(); // 取消请求
 ```
 
 ## ajax配置项
+
+### url
+
+Type: `string`
+
+### method
+
+Type: `string`
+
+一般是get、post
+
 ### baseURL
 
 Type: `string`
@@ -95,6 +106,7 @@ Type: `any`
 ### timeout
 
 Type: `number`
+<br>
 Default: `2 * 60 * 1000`，2分钟
 
 过期时间，单位ms。从请求开始，到这个时间如果接口没有响应，则会返回一个失败的promise。
@@ -102,6 +114,7 @@ Default: `2 * 60 * 1000`，2分钟
 ### timeoutErrorMessage
 
 Type: `string`
+<br>
 Default: `timeout`
 
 过期时间错误提示
@@ -109,6 +122,7 @@ Default: `timeout`
 ### timeoutErrorStatus
 
 Type: `number`
+<br>
 Default: `504`
 
 过期时间状态码
@@ -116,6 +130,7 @@ Default: `504`
 ### credentials
 
 Type: `string`
+<br>
 Default: `include`
 
 - omit：忽略cookie的发送
@@ -125,6 +140,7 @@ Default: `include`
 ### mode
 
 Type: `string`
+<br>
 Default: `cors`
 
 - same-origin：该模式是不允许跨域的，它需要遵守同源策略，否则浏览器会返回一个error告知不能跨域；其对应的response type为basic。
@@ -133,6 +149,7 @@ Default: `cors`
 
 ### stoppedErrorMessage
 Type: `string`
+<br>
 Default: `Ajax has been stopped! `
 
 当所有ajax停止后，提示错误信息。
