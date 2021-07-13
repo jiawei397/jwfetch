@@ -116,6 +116,14 @@ class Interceptors<T> {
   }
 }
 
+function jsonParse(str: any) {
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return str;
+  }
+}
+
 export class BaseAjax {
   static defaults: AjaxExConfig = {
     credentials: "include",
@@ -303,7 +311,8 @@ export class BaseAjax {
         return response;
       }
       //以下处理成功的结果
-      return response.json();
+      const result = await response.text();
+      return jsonParse(result);
     } catch (err) { //代表网络异常
       if (!this.isAbortError(err)) { //不属于主动取消的，需要进行提示
         this.showMessage(err, config);
