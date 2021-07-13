@@ -7,8 +7,19 @@
     "release": "rimraf ./dist && tsc",
     "prepublish": "npm version patch && npm run release"
   },
-  "keywords": [],
-  "author": "",
+  "author": "jw",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jiawei397/jwfetch.git"
+  },
+  "keywords": [
+    "typescript",
+    "browser",
+    "library",
+    "fetch",
+    "ajax",
+    "javascript"
+  ],
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^15.6.1",
