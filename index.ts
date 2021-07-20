@@ -1,5 +1,3 @@
-import {join} from "path";
-
 export type Method =
   | "get"
   | "GET"
@@ -233,7 +231,16 @@ export class BaseAjax {
   }
 
   private handleBaseUrl(url: string, baseURL?: string) {
-    return join(baseURL || "", url);
+    if (baseURL) {
+      if (!baseURL.endsWith('/')) {
+        baseURL += '/';
+      }
+      if (url.startsWith('/')) {
+        url = url.substr(1);
+      }
+      return baseURL + url;
+    }
+    return url;
   }
 
   private handlePostData(data: any, isFile?: boolean) {
