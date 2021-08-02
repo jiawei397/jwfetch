@@ -10,11 +10,11 @@
 
 ### 封装ajax
 ``` ts
-import { BaseAjax } from "./index";
+import { BaseAjax } from "jwfetch";
 
 export class Ajax extends BaseAjax {
   /**
-   * 处理消息，具体实现可以覆盖此项
+   * 处理消息
    */
   protected handleMessage(msg: string) {
     super.handleMessage(msg);
@@ -40,6 +40,7 @@ Ajax.defaults.baseURL = "/api";
 export const ajax = new Ajax();
 export const get = ajax.get.bind(ajax);
 export const post = ajax.post.bind(ajax);
+export const request = ajax.ajax.bind(ajax);
 ```
 
 ### 拦截
@@ -59,6 +60,22 @@ ajax.interceptors.response.use(function(data) {
 }, function(err)  {
   return Promise.reject(err);
 });
+```
+
+### 调用
+
+```ts
+const url = '/api/user/info';
+const data = {
+  id: "aaa"
+};
+request({
+  url,
+  method: 'post',
+  data
+});
+get(url, data);
+post(url, data);
 ```
 
 ### 获取可取消的请求

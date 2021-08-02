@@ -231,6 +231,9 @@ export class BaseAjax {
   }
 
   private handleBaseUrl(url: string, baseURL?: string) {
+    if (url.startsWith('http')) {
+      return url;
+    }
     if (baseURL) {
       if (!baseURL.endsWith('/')) {
         baseURL += '/';
