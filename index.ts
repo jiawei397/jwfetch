@@ -314,7 +314,7 @@ export class BaseAjax {
         ...otherParams,
       });
       if (!response.ok) { //代表网络请求失败，原因可能是token失效，这时需要跳转到登陆页
-        const msg = await response.json();
+        const msg = await response.text();
         this.showMessage(msg || response.statusText, config);
         this.handleErrorResponse(response);
         return Promise.reject(response);
