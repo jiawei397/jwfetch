@@ -1,101 +1,15 @@
-export type Method =
-  | "get"
-  | "GET"
-  | "delete"
-  | "DELETE"
-  | "head"
-  | "HEAD"
-  | "options"
-  | "OPTIONS"
-  | "post"
-  | "POST"
-  | "put"
-  | "PUT"
-  | "patch"
-  | "PATCH"
-  | "purge"
-  | "PURGE"
-  | "link"
-  | "LINK"
-  | "unlink"
-  | "UNLINK";
+import {
+  ErrorCallback,
+  AjaxExConfig,
+  RequestCallback,
+  ResponseCallback,
+  AjaxConfig,
+  AjaxResult,
+  AbortResult,
+  AjaxData
+} from "./types";
+import {jsonParse, deleteUndefinedProperty} from "./utils";
 
-export type Credentials = "omit" | "include" | "same-origin";
-
-export type Mode = "same-origin" | "cors" | "no-cors";
-
-export type AbortResult<T> = {
-  promise: Promise<T>;
-  abort: () => void;
-};
-
-export type CacheResult = {
-  promise: Promise<any>;
-  config: AjaxConfig;
-  controller?: AbortController;
-};
-
-export interface RequestConfig {
-  url?: string;
-  method?: Method;
-  baseURL?: string;
-  headers?: any;
-  data?: any;
-  timeout?: number;
-  timeoutErrorMessage?: string;
-  timeoutErrorStatus?: number;
-  /**
-   * omit：忽略cookie的发送
-   *
-   * same-origin: 表示cookie只能同域发送，不能跨域发送
-   *
-   * include: cookie既可以同域发送，也可以跨域发送
-   */
-  credentials?: Credentials;
-  /**
-   *  same-origin：该模式是不允许跨域的，它需要遵守同源策略，否则浏览器会返回一个error告知不能跨域；其对应的response type为basic。
-   *
-   *  cors: 该模式支持跨域请求，顾名思义它是以CORS的形式跨域；当然该模式也可以同域请求不需要后端额外的CORS支持；其对应的response type为cors。
-   *
-   *  no-cors: 该模式用于跨域请求但是服务器不带CORS响应头，也就是服务端不支持CORS；这也是fetch的特殊跨域请求方式；其对应的response type为opaque。
-   */
-  mode?: Mode;
-
-  stoppedErrorMessage?: string;
-}
-
-export interface AjaxExConfig extends RequestConfig {
-  isFile?: boolean; // 是否要传递文件
-  isNoAlert?: boolean; // 是否要提示错误信息，默认提示
-  isUseOrigin?: boolean; // 为true时，直接返回response，不再处理结果
-  isEncodeUrl?: boolean; //get请求时是否要进行浏览器编码
-  isOutStop?: boolean;
-  /**
-   * 主动控制取消请求时可传递此参数，或者直接使用ajaxAbortResult方法。例如：
-   *
-   *    const controller = new AbortController();
-   *    const {signal} = controller;
-   */
-  signal?: AbortSignal;
-  /**
-   * 如果是-1，代表不清除缓存
-   *
-   * 如果是0，代表不使用缓存
-   */
-  cacheTimeout?: number;
-}
-
-export interface AjaxConfig extends AjaxExConfig {
-  url: string;
-  method: Method;
-  data?: FormData | any;
-}
-
-type RequestCallback = (config: AjaxConfig) => AjaxConfig;
-
-type ErrorCallback = (error: Error) => Promise<Error>;
-
-type ResponseCallback = (data: any) => Promise<any>;
 
 class Interceptors<T> {
   public chain: any[];
@@ -114,14 +28,6 @@ class Interceptors<T> {
   }
 }
 
-function jsonParse(str: any) {
-  try {
-    return JSON.parse(str);
-  } catch (e) {
-    return str;
-  }
-}
-
 export class BaseAjax {
   static defaults: AjaxExConfig = {
     credentials: "include",
@@ -130,7 +36,8 @@ export class BaseAjax {
     timeoutErrorMessage: "timeout",
     timeoutErrorStatus: 504,
     stoppedErrorMessage: "Ajax has been stopped! ",
-    method: "POST",
+    method: "post",
+    debug: false
   };
 
   public interceptors = {
@@ -152,7 +59,7 @@ export class BaseAjax {
     return this.IS_AJAX_STOP;
   }
 
-  getUniqueKey(config: AjaxConfig) {
+  protected getUniqueKey(config: AjaxConfig) {
     return (config.baseURL || "") + config.url + config.method +
       (config.data ? JSON.stringify(config.data) : "");
   }
@@ -161,10 +68,8 @@ export class BaseAjax {
    * 取消接口请求
    * @param controller 取消控制器
    */
-  abort(controller: AbortController | undefined) {
-    if (controller) {
-      controller.abort();
-    }
+  abort(controller?: AbortController) {
+    controller?.abort();
   }
 
   /**
@@ -185,11 +90,7 @@ export class BaseAjax {
     if (config && config.isNoAlert) {
       return;
     }
-    if (!msg) {
-      console.error("No message available");
-      return;
-    }
-    this.handleMessage(msg);
+    this.handleMessage(msg || "No message available");
   }
 
   /**
@@ -231,14 +132,14 @@ export class BaseAjax {
   }
 
   private handleBaseUrl(url: string, baseURL?: string) {
-    if (url.startsWith('http')) {
+    if (url.startsWith("http")) {
       return url;
     }
     if (baseURL) {
-      if (!baseURL.endsWith('/')) {
-        baseURL += '/';
+      if (!baseURL.endsWith("/")) {
+        baseURL += "/";
       }
-      if (url.startsWith('/')) {
+      if (url.startsWith("/")) {
         url = url.substr(1);
       }
       return baseURL + url;
@@ -274,17 +175,19 @@ export class BaseAjax {
    * 进行fetch请求
    * @param config 配置
    */
-  async request(config: AjaxConfig) {
+  private async request(config: AjaxConfig) {
     const {
       url,
-      baseURL, //接着的前缀url
+      baseURL, //前缀url
       data,
+      query,
       headers = {},
       method,
       credentials,
       isFile,
       isUseOrigin,
       isEncodeUrl, //get请求时是否要进行浏览器编码
+      ignore,
       ...otherParams
     } = config;
 
@@ -294,12 +197,11 @@ export class BaseAjax {
       body = null; //get请求不能有body
       tempUrl = this.handleGetUrl(tempUrl, data, isEncodeUrl);
     } else {
+      if (query) {
+        tempUrl = this.handleGetUrl(tempUrl, query, isEncodeUrl);
+      }
       body = this.handlePostData(data, isFile);
-      if (isFile) {
-        if (!headers["Content-Type"]) {
-          headers["Content-Type"] = "application/x-www-form-urlencoded";
-        }
-      } else {
+      if (method.toUpperCase() === "POST") {
         if (!headers["Content-Type"]) {
           headers["Content-Type"] = "application/json";
         }
@@ -313,11 +215,13 @@ export class BaseAjax {
         credentials,
         ...otherParams,
       });
-      if (!response.ok) { //代表网络请求失败，原因可能是token失效，这时需要跳转到登陆页
-        const msg = await response.text();
-        this.showMessage(msg || response.statusText, config);
-        this.handleErrorResponse(response);
-        return Promise.reject(response);
+      if (!response.ok) { // 状态码不是200到300，代表请求失败
+        if (!(Array.isArray(ignore) && ignore.includes(response.status))) { // 如果不忽略错误码
+          const msg = await response.text();
+          this.showMessage(msg || response.statusText, config);
+          this.handleErrorResponse(response);
+          return Promise.reject(response);
+        }
       }
       if (isUseOrigin) {
         return response;
@@ -334,7 +238,8 @@ export class BaseAjax {
   }
 
   /**
-   * 处理错误请求
+   * 处理200-300外的错误状态码的请求
+   * 一般可以在这里处理跳转逻辑
    */
   protected handleErrorResponse(response: Response) {
     console.error(
@@ -344,6 +249,54 @@ export class BaseAjax {
 
   isAbortError(err: Error) {
     return err.name === "AbortError";
+  }
+
+  private mergeAbortConfig(
+    config: AjaxConfig,
+    signal?: AbortSignal,
+  ): AbortController | undefined {
+    let controller;
+    if (typeof AbortController === "function" && signal === undefined) { // 如果要自己控制取消请求，需要自己传递signal，或者使用isReturnAbort参数
+      controller = new AbortController();
+      config.signal = controller.signal;
+    }
+    return controller;
+  }
+
+  private mergeConfig(cfg: AjaxConfig): AjaxConfig {
+    deleteUndefinedProperty(cfg);
+    const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
+    const chain = this.interceptors.request.chain;
+    for (let i = 0; i < chain.length; i += 2) {
+      try {
+        chain[i](config);
+      } catch (e) {
+        console.error(e);
+        chain[i + 1]?.(e); // TODO 这个作用没想好
+        break;
+      }
+    }
+    return config;
+  }
+
+  private mergeResponse(promise: Promise<any>) {
+    const chain = this.interceptors.response.chain;
+    for (let i = 0; i < chain.length; i += 2) {
+      promise = promise.then(chain[i], chain[i + 1]);
+    }
+    return promise;
+  }
+
+  private clearCacheByKey(uniqueKey: string, cacheTimeout?: number) {
+    if (cacheTimeout !== undefined) {
+      if (cacheTimeout >= 0) { // 如果小于0，不清除
+        setTimeout(() => {
+          this.caches.delete(uniqueKey);
+        }, cacheTimeout);
+      }
+    } else {
+      this.caches.delete(uniqueKey);
+    }
   }
 
   /**
@@ -375,127 +328,80 @@ export class BaseAjax {
     });
   }
 
-  private mergeAbortConfig(
-    config: AjaxConfig,
-    signal?: AbortSignal,
-  ): AbortController | undefined {
-    let controller;
-    if (typeof window.AbortController === "function" && signal === undefined) { // 如果要自己控制取消请求，需要自己传递signal，或者使用isReturnAbort参数
-      controller = new AbortController();
-      config.signal = controller.signal;
-    }
-    return controller;
-  }
-
-  mergeConfig(cfg: AjaxConfig) {
-    const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
-    const chain = this.interceptors.request.chain;
-    let callback;
-    let errCallback;
-    while (callback = chain.shift()) {
-      try {
-        errCallback = chain.shift();
-        callback(config);
-      } catch (e) {
-        console.error(e);
-        errCallback(e); // TODO 这个作用没想好
-        break;
-      }
-    }
-    return config;
-  }
-
-  mergeResponse(promise: Promise<any>) {
-    const chain = this.interceptors.response.chain;
-    while (chain.length) {
-      promise = promise.then(chain.shift(), chain.shift());
-    }
-    return promise;
-  }
-
-  clearCacheByKey(uniqueKey: string, cacheTimeout?: number) {
-    if (cacheTimeout !== undefined) {
-      if (cacheTimeout >= 0) { // 如果小于0，不清除
-        setTimeout(() => {
-          this.caches.delete(uniqueKey);
-        }, cacheTimeout);
-      }
-    } else {
-      this.caches.delete(uniqueKey);
-    }
+  private core_ajax(mergedConfig: AjaxConfig): AjaxResult {
+    const {signal} = mergedConfig;
+    const controller = this.mergeAbortConfig(mergedConfig, signal);
+    const temp = this.request(mergedConfig);
+    const promise = this.fetch_timeout(temp, controller, mergedConfig);
+    return {
+      promise: this.mergeResponse(promise),
+      config: mergedConfig,
+      controller,
+    };
   }
 
   /**
    * 缓存请求，同一时间同一请求只会向后台发送一次
    */
-  private cache_ajax(cfg: AjaxConfig): CacheResult {
-    const config = this.mergeConfig(cfg);
-    const {signal, cacheTimeout} = config;
-    if (cacheTimeout === 0) { // 不缓存结果
-      const controller = this.mergeAbortConfig(config, signal);
-      const promise = this.request(config);
-      return {
-        promise: this.mergeResponse(promise),
-        config,
-        controller,
-      };
+  private cache_ajax(cfg: AjaxConfig): AjaxResult {
+    const mergedConfig = this.mergeConfig(cfg);
+    const {cacheTimeout} = mergedConfig;
+    if (cacheTimeout === 0) { // 不缓存结果，也就是说不会过滤掉重复的请求
+      return this.core_ajax(mergedConfig);
     }
-    const uniqueKey = this.getUniqueKey(config);
+    const uniqueKey = this.getUniqueKey(mergedConfig);
     const caches = this.caches;
     if (!caches.has(uniqueKey)) {
-      const controller = this.mergeAbortConfig(config, signal);
-      const temp = this.request(config).then((result) => {
-        this.clearCacheByKey(uniqueKey, config.cacheTimeout);
-        return result;
+      const result = this.core_ajax(mergedConfig);
+      result.promise = result.promise.then((res) => {
+        this.clearCacheByKey(uniqueKey, mergedConfig.cacheTimeout);
+        return res;
       }, (err) => {
-        this.clearCacheByKey(uniqueKey, config.cacheTimeout);
+        this.clearCacheByKey(uniqueKey, mergedConfig.cacheTimeout);
         return Promise.reject(err);
       });
-      const promise = this.fetch_timeout(temp, controller, config);
-      caches.set(uniqueKey, {
-        promise: this.mergeResponse(promise),
-        config,
-        controller,
-      });
+      caches.set(uniqueKey, result);
+    } else {
+      if (mergedConfig.debug) {
+        console.debug(`read from cache : ${uniqueKey}`);
+      }
     }
     return caches.get(uniqueKey);
+  }
+
+  private all_ajax(cfg: AjaxConfig): AjaxResult {
+    const {isOutStop} = cfg;
+    if (!isOutStop && this.isAjaxStopped()) {
+      return {
+        promise: Promise.reject(BaseAjax.defaults.stoppedErrorMessage),
+        config: cfg,
+      };
+    }
+    return this.cache_ajax(cfg);
   }
 
   /**
    * ajax主方法，返回promise
    */
   ajax<T>(cfg: AjaxConfig): Promise<T> {
-    const {isOutStop} = cfg;
-    if (!isOutStop && this.isAjaxStopped()) {
-      return Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
-    }
-    const result = this.cache_ajax(cfg);
-    return result.promise;
+    const result = this.all_ajax(cfg);
+    return result.promise as Promise<T>;
   }
 
   /**
    * 调用ajax的同时，返回取消ajax请求的方法
    */
   ajaxAbortResult<T>(cfg: AjaxConfig): AbortResult<T> {
-    const {isOutStop} = cfg;
-    if (!isOutStop && this.isAjaxStopped()) {
-      const promise = Promise.reject(BaseAjax.defaults.stoppedErrorMessage);
-      return {
-        promise,
-        abort: () => {
-        },
-      };
-    }
-    const result = this.cache_ajax(cfg);
+    const result = this.all_ajax(cfg);
     return {
-      promise: result.promise,
+      promise: result.promise as Promise<T>,
       abort: () => {
         return this.abort(result.controller);
       },
     };
   }
 
-  get<T>(url: string, data?: any, options?: AjaxExConfig) {
+  get<T>(url: string, data?: AjaxData, options?: AjaxExConfig) {
     return this.ajax<T>({
       url,
       method: "get",
@@ -507,7 +413,7 @@ export class BaseAjax {
   /**
    * 调用ajax的get请求的同时，返回取消ajax请求的方法
    */
-  getAbortResult<T>(url: string, data?: any, options?: AjaxExConfig) {
+  getAbortResult<T>(url: string, data?: AjaxData, options?: AjaxExConfig) {
     return this.ajaxAbortResult<T>({
       url,
       method: "get",
@@ -516,7 +422,7 @@ export class BaseAjax {
     });
   }
 
-  post<T>(url: string, data?: any, options?: AjaxExConfig) {
+  post<T>(url: string, data?: AjaxData, options?: AjaxExConfig) {
     return this.ajax<T>({
       url,
       method: "post",
@@ -528,7 +434,7 @@ export class BaseAjax {
   /**
    * 调用ajax的post请求同时，返回取消ajax请求的方法
    */
-  postAbortResult<T>(url: string, data?: any, options?: AjaxExConfig) {
+  postAbortResult<T>(url: string, data?: AjaxData, options?: AjaxExConfig) {
     return this.ajaxAbortResult<T>({
       url,
       method: "post",

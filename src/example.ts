@@ -1,4 +1,4 @@
-import {BaseAjax} from "./index";
+import { BaseAjax } from "./index";
 
 export class Ajax extends BaseAjax {
   /**
@@ -28,9 +28,9 @@ export class Ajax extends BaseAjax {
 Ajax.defaults.baseURL = "/api";
 
 export const ajax = new Ajax();
-export const get = ajax.get.bind(ajax);
-export const post = ajax.post.bind(ajax);
-export const request = ajax.ajax.bind(ajax);
+// export const get = ajax.get.bind(ajax);
+// export const post = ajax.post.bind(ajax);
+// export const request = ajax.ajax.bind(ajax);
 
 ajax.interceptors.request.use(function (config) {
   config.headers = config.headers || {};
@@ -50,10 +50,13 @@ const url = '/api/user/info';
 const data = {
   id: "aaa"
 };
-request({
+ajax.ajax<User>({
   url,
   method: 'post',
   data
-});
-get(url, data);
-post(url, data);
+}).then(res => console.log(res));
+type User = {
+  name: string;
+}
+ajax.get<User>(url, data).then(res => console.log(res));
+ajax.post<User>(url, data).then(res => console.log(res));

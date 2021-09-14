@@ -5,11 +5,12 @@
     "removeComments": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "downlevelIteration": true,
     "resolveJsonModule": false,
     "target": "es2020",
     "sourceMap": false,
-    "rootDir": ".",
-    "outDir": "./dist/",
-    "incremental": true
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "incremental": false
   }
 }
