@@ -91,7 +91,11 @@ export interface AjaxExConfig extends RequestConfig {
    */
   cacheTimeout?: number;
 
-  debug?: boolean; // 是否debug，打印一些消息
+  /* 是否debug，打印一些消息 */
+  debug?: boolean;
+
+  /* 默认put和post的content-type */
+  defaultPutAndPostContentType?: string;
 }
 
 export type AjaxData = any;

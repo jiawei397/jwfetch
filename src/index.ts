@@ -8,7 +8,7 @@ import {
   AbortResult,
   AjaxData
 } from "./types";
-import {jsonParse, deleteUndefinedProperty} from "./utils";
+import { jsonParse, deleteUndefinedProperty } from "./utils";
 
 
 class Interceptors<T> {
@@ -37,6 +37,7 @@ export class BaseAjax {
     timeoutErrorStatus: 504,
     stoppedErrorMessage: "Ajax has been stopped! ",
     method: "post",
+    defaultPutAndPostContentType: "application/json; charset=UTF-8",
     debug: false
   };
 
@@ -188,6 +189,7 @@ export class BaseAjax {
       isUseOrigin,
       isEncodeUrl, //get请求时是否要进行浏览器编码
       ignore,
+      defaultPutAndPostContentType,
       ...otherParams
     } = config;
 
@@ -201,9 +203,11 @@ export class BaseAjax {
         tempUrl = this.handleGetUrl(tempUrl, query, isEncodeUrl);
       }
       body = this.handlePostData(data, isFile);
-      if (method.toUpperCase() === "POST") {
-        if (!headers["Content-Type"]) {
-          headers["Content-Type"] = "application/json";
+      if (!isFile) {
+        if (method.toUpperCase() === "POST" || method.toUpperCase() === "PUT") {
+          if (!Object.keys(headers).find(key => key.toLowerCase() === 'content-type')) {
+            headers["content-type"] = defaultPutAndPostContentType!;
+          }
         }
       }
     }
@@ -329,7 +333,7 @@ export class BaseAjax {
   }
 
   private core_ajax(mergedConfig: AjaxConfig): AjaxResult {
-    const {signal} = mergedConfig;
+    const { signal } = mergedConfig;
     const controller = this.mergeAbortConfig(mergedConfig, signal);
     const temp = this.request(mergedConfig);
     const promise = this.fetch_timeout(temp, controller, mergedConfig);
@@ -345,7 +349,7 @@ export class BaseAjax {
    */
   private cache_ajax(cfg: AjaxConfig): AjaxResult {
     const mergedConfig = this.mergeConfig(cfg);
-    const {cacheTimeout} = mergedConfig;
+    const { cacheTimeout } = mergedConfig;
     if (cacheTimeout === 0) { // 不缓存结果，也就是说不会过滤掉重复的请求
       return this.core_ajax(mergedConfig);
     }
@@ -370,7 +374,7 @@ export class BaseAjax {
   }
 
   private all_ajax(cfg: AjaxConfig): AjaxResult {
-    const {isOutStop} = cfg;
+    const { isOutStop } = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       return {
         promise: Promise.reject(BaseAjax.defaults.stoppedErrorMessage),
