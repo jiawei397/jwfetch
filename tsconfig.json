@@ -7,7 +7,7 @@
     "experimentalDecorators": true,
     "downlevelIteration": true,
     "resolveJsonModule": false,
-    "target": "es2020",
+    "target": "es2018",
     "sourceMap": false,
     "rootDir": "./src",
     "outDir": "./dist",
