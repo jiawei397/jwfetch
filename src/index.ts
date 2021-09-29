@@ -70,7 +70,7 @@ export class BaseAjax {
    * @param controller 取消控制器
    */
   abort(controller?: AbortController) {
-    controller?.abort();
+    controller && controller.abort();
   }
 
   /**
@@ -276,7 +276,9 @@ export class BaseAjax {
         chain[i](config);
       } catch (e) {
         console.error(e);
-        chain[i + 1]?.(e); // TODO 这个作用没想好
+        if (chain[i + 1]) {
+          chain[i + 1](e);// TODO 这个作用没想好
+        }
         break;
       }
     }
