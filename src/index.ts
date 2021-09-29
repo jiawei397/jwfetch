@@ -141,7 +141,7 @@ export class BaseAjax {
         baseURL += "/";
       }
       if (url.startsWith("/")) {
-        url = url.substr(1);
+        url = url.substring(1);
       }
       return baseURL + url;
     }
