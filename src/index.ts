@@ -87,18 +87,18 @@ export class BaseAjax {
   /**
    * 提示错误，可以配置不提示
    */
-  private showMessage(msg: string, config?: AjaxConfig) {
+  private showMessage(msg: string, config: AjaxConfig, status?: number) {
     if (config && config.isNoAlert) {
       return;
     }
-    this.handleMessage(msg || "No message available");
+    this.handleMessage(msg || "No message available", status);
   }
 
   /**
    * 处理消息，具体实现可以覆盖此项
    */
-  protected handleMessage(msg: string) {
-    console.error(msg);
+  protected handleMessage(msg: string, status?: number) {
+    console.error(msg, status);
   }
 
   private handleGetUrl(url: string, data: any, isEncodeUrl?: boolean) {
@@ -222,7 +222,7 @@ export class BaseAjax {
       if (!response.ok) { // 状态码不是200到300，代表请求失败
         if (!(Array.isArray(ignore) && ignore.includes(response.status))) { // 如果不忽略错误码
           const msg = await response.text();
-          this.showMessage(msg || response.statusText, config);
+          this.showMessage(msg || response.statusText, config, response.status);
           this.handleErrorResponse(response);
           return Promise.reject(response);
         }
