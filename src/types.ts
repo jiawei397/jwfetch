@@ -64,6 +64,8 @@ export interface RequestConfig {
    */
   mode?: Mode;
 
+  cache?: "default" | "no-store" | "reload" | "no-cache" | "force-cache" | "only-if-cached";
+
   stoppedErrorMessage?: string;
 
   ignore?: number[];
