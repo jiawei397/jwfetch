@@ -3,6 +3,7 @@
   "version": "1.1.1",
   "description": "",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "release": "rimraf ./dist && tsc",
     "mypublish": "npm version patch && npm run release && npm publish"
