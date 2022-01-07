@@ -333,6 +333,9 @@ export class BaseAjax {
     return Promise.race([fecthPromise, abortPromise]).then((res) => {
       clearTimeout(tp);
       return res;
+    }, (err) => {
+      clearTimeout(tp);
+      return Promise.reject(err);
     });
   }
 
