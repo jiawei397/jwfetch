@@ -151,7 +151,9 @@ export class BaseAjax {
   private handlePostData(data: any, isFile?: boolean) {
     let obj = data;
     if (typeof data === "object") {
-      if (isFile) { //文件上传
+      if (data instanceof FormData) {
+        // 不用处理
+      } else if (isFile) { //文件上传
         const formData = new FormData(); //构造空对象，下面用append方法赋值。
         for (const key in data) {
           if (!data.hasOwnProperty(key)) {
