@@ -205,7 +205,7 @@ export class BaseAjax {
         tempUrl = this.handleGetUrl(tempUrl, query, isEncodeUrl);
       }
       body = this.handlePostData(data, isFile);
-      if (!isFile) {
+      if (body && !(body instanceof FormData)) { // 如果是FormData，不需要设置content-type
         if (method.toUpperCase() === "POST" || method.toUpperCase() === "PUT") {
           if (!Object.keys(headers).find(key => key.toLowerCase() === 'content-type')) {
             headers["content-type"] = defaultPutAndPostContentType!;
