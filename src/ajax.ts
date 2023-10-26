@@ -10,7 +10,7 @@ import {
   AbortResult,
   AjaxData,
 } from "./types";
-import { deleteUndefinedProperty } from "./utils";
+import { deleteUndefinedProperty, resolveUrl } from "./utils";
 
 class Interceptors<T, E> {
   public chain: any[];
@@ -127,22 +127,6 @@ export class Ajax {
     return tempUrl;
   }
 
-  private handleBaseUrl(url: string, baseURL?: string) {
-    if (url.startsWith("http")) {
-      return url;
-    }
-    if (baseURL) {
-      if (!baseURL.endsWith("/")) {
-        baseURL += "/";
-      }
-      if (url.startsWith("/")) {
-        url = url.substring(1);
-      }
-      return baseURL + url;
-    }
-    return url;
-  }
-
   private handlePostData(data: any, isFile?: boolean) {
     let obj = data;
     if (typeof data === "object") {
@@ -191,7 +175,7 @@ export class Ajax {
       ...otherParams
     } = config;
 
-    let tempUrl = this.handleBaseUrl(url, baseURL);
+    let tempUrl = resolveUrl(url, baseURL);
     let body: any;
     if (method.toUpperCase() === "GET") {
       body = null; //get请求不能有body
