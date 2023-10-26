@@ -7,3 +7,17 @@ export function deleteUndefinedProperty(obj: any) {
     }
   }
 }
+
+export function resolveUrl(url: string, baseURL?: string) {
+  if (!baseURL) return url;
+  if (url.startsWith("http")) {
+    return url;
+  }
+  if (!baseURL.endsWith("/")) {
+    baseURL += "/";
+  }
+  if (url.startsWith("/")) {
+    url = url.substring(1);
+  }
+  return baseURL + url;
+}
