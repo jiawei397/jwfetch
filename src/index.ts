@@ -238,7 +238,7 @@ export class Ajax {
           }
           const error = await getResult();
           return Promise.reject(
-            new FetchError(error, FetchErrorType.HTTP, response.status)
+            new FetchError(error, FetchErrorType.HTTP, config, response.status)
           );
         }
       }
@@ -249,7 +249,9 @@ export class Ajax {
       return getResult();
     } catch (err) {
       //代表网络异常
-      return Promise.reject(new FetchError(err, FetchErrorType.Network));
+      return Promise.reject(
+        new FetchError(err, FetchErrorType.Network, config)
+      );
     }
   }
 
@@ -326,6 +328,7 @@ export class Ajax {
           new FetchError(
             config.timeoutErrorMessage,
             FetchErrorType.Timeout,
+            config,
             config.timeoutErrorStatus
           )
         );
@@ -394,7 +397,7 @@ export class Ajax {
     if (!isOutStop && this.isAjaxStopped()) {
       return {
         promise: Promise.reject(
-          new FetchError(cfg.stoppedErrorMessage, FetchErrorType.Stop)
+          new FetchError(cfg.stoppedErrorMessage, FetchErrorType.Stop, cfg)
         ),
         config: cfg,
       };

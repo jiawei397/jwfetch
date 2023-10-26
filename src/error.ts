@@ -1,3 +1,5 @@
+import { AjaxConfig } from "./types";
+
 export enum FetchErrorType {
   Network = "network",
   // Abort = "abort",
@@ -8,15 +10,14 @@ export enum FetchErrorType {
 
 export class FetchError extends Error {
   name = "FetchError";
-  type: FetchErrorType;
-  status?: number; // status code
   originError?: any;
-  cause: any;
+  // cause: any;
 
   constructor(
     message: string | Error | Record<string, any>,
-    type: FetchErrorType,
-    status?: number
+    public type: FetchErrorType,
+    public config: AjaxConfig,
+    public status?: number
   ) {
     super(typeof message === "string" ? message : message.message);
     if (typeof message !== "string") {
@@ -26,7 +27,5 @@ export class FetchError extends Error {
       }
       this.originError = message;
     }
-    this.type = type;
-    this.status = status;
   }
 }
