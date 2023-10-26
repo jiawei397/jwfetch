@@ -41,6 +41,12 @@ export class Ajax {
     debug: false,
   };
 
+  private defaultConfig: AjaxExConfig;
+
+  constructor(cfg: AjaxExConfig = {}) {
+    this.defaultConfig = { ...Ajax.defaults, ...cfg };
+  }
+
   public interceptors = {
     request: new Interceptors<RequestCallback>(),
     response: new Interceptors<ResponseCallback>(),
@@ -265,7 +271,7 @@ export class Ajax {
 
   private mergeConfig(cfg: AjaxConfig): AjaxConfig {
     deleteUndefinedProperty(cfg);
-    const config = Object.assign({}, Ajax.defaults, cfg); // 把默认值覆盖了
+    const config = Object.assign({}, this.defaultConfig, cfg); // 把默认值覆盖了
     const chain = this.interceptors.request.chain;
     for (let i = 0; i < chain.length; i += 2) {
       try {

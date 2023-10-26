@@ -1,8 +1,8 @@
 import { Ajax } from "./index";
 
-Ajax.defaults.baseURL = "/api";
+// Ajax.defaults.baseURL = "/api";
 
-export const ajax = new Ajax();
+export const ajax = new Ajax({ baseURL: "/api" });
 // export const get = ajax.get.bind(ajax);
 // export const post = ajax.post.bind(ajax);
 // export const request = ajax.ajax.bind(ajax);
