@@ -84,7 +84,7 @@ export interface AjaxExConfig extends RequestConfig {
 
   isFile?: boolean; // 是否要传递文件
   isNoAlert?: boolean; // 是否要提示错误信息，默认提示
-  isUseOrigin?: boolean; // 为true时，直接返回response，不再处理结果
+  isUseOrigin?: boolean; // 为true时，直接返回response，不再处理结果，但是如果response.ok为false，会抛出异常
   isEncodeUrl?: boolean; //get请求时是否要进行浏览器编码
   isOutStop?: boolean;
   /**
