@@ -14,7 +14,7 @@ ajax.interceptors.request.use(
     return config;
   },
   function (err) {
-    return Promise.reject(err);
+    throw err;
   }
 );
 

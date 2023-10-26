@@ -29,7 +29,7 @@ ajax.interceptors.request.use(function(config) {
   config.headers.token = "abcd";
   return config;
 }, function(err)  {
-  return Promise.reject(err);
+  throw err;
 });
 
 // 响应拦截

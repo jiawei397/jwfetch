@@ -1,6 +1,7 @@
 import { FetchError, FetchErrorType } from "./error";
 import {
-  ErrorCallback,
+  ErrorRequestCallback,
+  ErrorResponseCallback,
   AjaxExConfig,
   RequestCallback,
   ResponseCallback,
@@ -11,14 +12,14 @@ import {
 } from "./types";
 import { deleteUndefinedProperty } from "./utils";
 
-class Interceptors<T> {
+class Interceptors<T, E> {
   public chain: any[];
 
   constructor() {
     this.chain = [];
   }
 
-  use(callback: T, errorCallback: ErrorCallback) {
+  use(callback: T, errorCallback: E) {
     this.chain.push(callback, errorCallback);
     return this.chain.length - 2;
   }
@@ -48,8 +49,8 @@ export class Ajax {
   }
 
   public interceptors = {
-    request: new Interceptors<RequestCallback>(),
-    response: new Interceptors<ResponseCallback>(),
+    request: new Interceptors<RequestCallback, ErrorRequestCallback>(),
+    response: new Interceptors<ResponseCallback, ErrorResponseCallback>(),
   };
 
   public caches = new Map(); // 缓存所有已经请求的Promise，同一时间重复的不再请求
@@ -277,9 +278,8 @@ export class Ajax {
       try {
         chain[i](config);
       } catch (e) {
-        console.error("mergeConfig error", e); // 正常请求的处理不应该报错
+        // console.error("mergeConfig error", e); // 正常请求的处理不应该报错
         chain[i + 1]?.(e);
-        break;
       }
     }
     return config;
@@ -465,3 +465,14 @@ export class Ajax {
     });
   }
 }
+
+export {
+  FetchError,
+  FetchErrorType,
+  AjaxExConfig,
+  AjaxConfig,
+  AjaxData,
+  AjaxResult,
+  ErrorRequestCallback,
+  ErrorResponseCallback,
+};

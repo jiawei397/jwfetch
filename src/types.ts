@@ -1,3 +1,5 @@
+import { FetchError } from "./error";
+
 export type Method =
   | "get"
   | "GET"
@@ -64,7 +66,13 @@ export interface RequestConfig {
    */
   mode?: Mode;
 
-  cache?: "default" | "no-store" | "reload" | "no-cache" | "force-cache" | "only-if-cached";
+  cache?:
+    | "default"
+    | "no-store"
+    | "reload"
+    | "no-cache"
+    | "force-cache"
+    | "only-if-cached";
 
   stoppedErrorMessage?: string;
 
@@ -110,6 +118,8 @@ export interface AjaxConfig extends AjaxExConfig {
 
 export type RequestCallback = (config: AjaxConfig) => AjaxConfig;
 
-export type ErrorCallback = (error: Error) => Promise<Error>;
+export type ErrorRequestCallback = (error: Error) => void;
+
+export type ErrorResponseCallback = (error: FetchError) => Promise<any>;
 
 export type ResponseCallback = (data: any) => Promise<any>;
