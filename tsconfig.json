@@ -1,16 +1,19 @@
 {
   "compilerOptions": {
-    "module": "esnext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "lib": ["DOM", "ESNext"],
     "declaration": true,
     "removeComments": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "downlevelIteration": true,
     "resolveJsonModule": false,
-    "target": "es2018",
+    "target": "ESNext",
     "sourceMap": false,
     "rootDir": "./src",
     "outDir": "./dist",
     "incremental": false
-  }
+  },
+  "exclude": ["*.ts"]
 }

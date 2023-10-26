@@ -1,4 +1,4 @@
-import { Ajax } from "./index";
+import { Ajax } from "./src/index";
 
 // Ajax.defaults.baseURL = "/api";
 
