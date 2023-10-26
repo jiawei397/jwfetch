@@ -9,32 +9,9 @@
 ## 使用
 
 ### 封装ajax
+
 ``` ts
-import { BaseAjax } from "jwfetch";
-
-export class Ajax extends BaseAjax {
-  /**
-   * 处理消息
-   */
-  protected handleMessage(msg: string) {
-    super.handleMessage(msg);
-  }
-
-  /**
-   * 处理错误请求
-   */
-  protected handleErrorResponse(response: Response) {
-    console.error(
-      `HTTP error, status = ${response.status}, statusText = ${response.statusText}`,
-    );
-    if (response.status === 401) { //权限问题
-      this.stopAjax();
-      this.abortAll();
-      // toLogin();
-    }
-  }
-}
-
+import { Ajax } from "jwfetch";
 Ajax.defaults.baseURL = "/api";
 
 export const ajax = new Ajax();
@@ -44,6 +21,7 @@ export const request = ajax.ajax.bind(ajax);
 ```
 
 ### 拦截
+
 ``` ts
 // 请求拦截
 ajax.interceptors.request.use(function(config) {

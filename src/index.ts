@@ -1,3 +1,4 @@
+import { FetchError, FetchErrorType } from "./error";
 import {
   ErrorCallback,
   AjaxExConfig,
@@ -6,10 +7,9 @@ import {
   AjaxConfig,
   AjaxResult,
   AbortResult,
-  AjaxData
+  AjaxData,
 } from "./types";
-import { jsonParse, deleteUndefinedProperty } from "./utils";
-
+import { deleteUndefinedProperty } from "./utils";
 
 class Interceptors<T> {
   public chain: any[];
@@ -28,7 +28,7 @@ class Interceptors<T> {
   }
 }
 
-export class BaseAjax {
+export class Ajax {
   static defaults: AjaxExConfig = {
     credentials: "include",
     mode: "cors",
@@ -38,7 +38,7 @@ export class BaseAjax {
     stoppedErrorMessage: "Ajax has been stopped! ",
     method: "post",
     defaultPutAndPostContentType: "application/json; charset=UTF-8",
-    debug: false
+    debug: false,
   };
 
   public interceptors = {
@@ -61,8 +61,12 @@ export class BaseAjax {
   }
 
   protected getUniqueKey(config: AjaxConfig) {
-    return (config.baseURL || "") + config.url + config.method +
-      (config.data ? JSON.stringify(config.data) : "");
+    return (
+      (config.baseURL || "") +
+      config.url +
+      config.method +
+      (config.data ? JSON.stringify(config.data) : "")
+    );
   }
 
   /**
@@ -78,27 +82,11 @@ export class BaseAjax {
    */
   abortAll() {
     for (const cache of this.caches.values()) {
-      if (!cache.config.isOutStop) { // 如果是要跳出停止处理的，就不能给取消了
+      if (!cache.config.isOutStop) {
+        // 如果是要跳出停止处理的，就不能给取消了
         this.abort(cache.controller);
       }
     }
-  }
-
-  /**
-   * 提示错误，可以配置不提示
-   */
-  private showMessage(msg: string, config: AjaxConfig, status?: number) {
-    if (config && config.isNoAlert) {
-      return;
-    }
-    this.handleMessage(msg || "No message available", status);
-  }
-
-  /**
-   * 处理消息，具体实现可以覆盖此项
-   */
-  protected handleMessage(msg: string, status?: number) {
-    console.error(msg, status);
   }
 
   private handleGetUrl(url: string, data: any, isEncodeUrl?: boolean) {
@@ -153,7 +141,8 @@ export class BaseAjax {
     if (typeof data === "object") {
       if (data instanceof FormData) {
         // 不用处理
-      } else if (isFile) { //文件上传
+      } else if (isFile) {
+        //文件上传
         const formData = new FormData(); //构造空对象，下面用append方法赋值。
         for (const key in data) {
           if (!data.hasOwnProperty(key)) {
@@ -205,9 +194,14 @@ export class BaseAjax {
         tempUrl = this.handleGetUrl(tempUrl, query, isEncodeUrl);
       }
       body = this.handlePostData(data, isFile);
-      if (body && !(body instanceof FormData)) { // 如果是FormData，不需要设置content-type
+      if (body && !(body instanceof FormData)) {
+        // 如果是FormData，不需要设置content-type
         if (method.toUpperCase() === "POST" || method.toUpperCase() === "PUT") {
-          if (!Object.keys(headers).find(key => key.toLowerCase() === 'content-type')) {
+          if (
+            !Object.keys(headers).find(
+              (key) => key.toLowerCase() === "content-type"
+            )
+          ) {
             headers["content-type"] = defaultPutAndPostContentType!;
           }
         }
@@ -221,40 +215,35 @@ export class BaseAjax {
         credentials,
         ...otherParams,
       });
-      if (!response.ok) { // 状态码不是200到300，代表请求失败
-        if (!(Array.isArray(ignore) && ignore.includes(response.status))) { // 如果不忽略错误码
+      const getResult = () => {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return response.json();
+        }
+        return response.text();
+      };
+      if (!response.ok) {
+        // 状态码不是200到300，代表请求失败
+        if (!(Array.isArray(ignore) && ignore.includes(response.status))) {
+          // 如果不忽略错误码
           if (isUseOrigin) {
             return Promise.reject(response);
           }
-          const msg = await response.text();
-          const errMsg = msg || response.statusText;
-          this.showMessage(errMsg, config, response.status);
-          this.handleErrorResponse(response);
-          return Promise.reject(errMsg);
+          const error = await getResult();
+          return Promise.reject(
+            new FetchError(error, FetchErrorType.HTTP, response.status)
+          );
         }
       }
       if (isUseOrigin) {
         return response;
       }
       //以下处理成功的结果
-      const result = await response.text();
-      return jsonParse(result);
-    } catch (err) { //代表网络异常
-      if (!this.isAbortError(err)) { //不属于主动取消的，需要进行提示
-        this.showMessage(err, config);
-      }
-      return Promise.reject(err);
+      return getResult();
+    } catch (err) {
+      //代表网络异常
+      return Promise.reject(new FetchError(err, FetchErrorType.Network));
     }
-  }
-
-  /**
-   * 处理200-300外的错误状态码的请求
-   * 一般可以在这里处理跳转逻辑
-   */
-  protected handleErrorResponse(response: Response) {
-    console.error(
-      `HTTP error, status = ${response.status}, statusText = ${response.statusText}`,
-    );
   }
 
   isAbortError(err: Error) {
@@ -263,10 +252,11 @@ export class BaseAjax {
 
   private mergeAbortConfig(
     config: AjaxConfig,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): AbortController | undefined {
     let controller;
-    if (typeof AbortController === "function" && signal === undefined) { // 如果要自己控制取消请求，需要自己传递signal，或者使用isReturnAbort参数
+    if (typeof AbortController === "function" && signal === undefined) {
+      // 如果要自己控制取消请求，需要自己传递signal，或者使用isReturnAbort参数
       controller = new AbortController();
       config.signal = controller.signal;
     }
@@ -275,14 +265,14 @@ export class BaseAjax {
 
   private mergeConfig(cfg: AjaxConfig): AjaxConfig {
     deleteUndefinedProperty(cfg);
-    const config = Object.assign({}, BaseAjax.defaults, cfg); // 把默认值覆盖了
+    const config = Object.assign({}, Ajax.defaults, cfg); // 把默认值覆盖了
     const chain = this.interceptors.request.chain;
     for (let i = 0; i < chain.length; i += 2) {
       try {
         chain[i](config);
       } catch (e) {
-        console.error(e);
-        chain[i + 1]?.(e);// TODO 这个作用没想好
+        console.error("mergeConfig error", e); // 正常请求的处理不应该报错
+        chain[i + 1]?.(e);
         break;
       }
     }
@@ -299,7 +289,8 @@ export class BaseAjax {
 
   private clearCacheByKey(uniqueKey: string, cacheTimeout?: number) {
     if (cacheTimeout !== undefined) {
-      if (cacheTimeout >= 0) { // 如果小于0，不清除
+      if (cacheTimeout >= 0) {
+        // 如果小于0，不清除
         setTimeout(() => {
           this.caches.delete(uniqueKey);
         }, cacheTimeout);
@@ -318,27 +309,33 @@ export class BaseAjax {
   private fetch_timeout(
     fecthPromise: Promise<any>,
     controller: AbortController | undefined,
-    config: AjaxConfig,
+    config: AjaxConfig
   ) {
     let tp: any;
     const timeout = config.timeout;
     const abortPromise = new Promise((resolve, reject) => {
       tp = setTimeout(() => {
         this.abort(controller);
-        reject({
-          code: config.timeoutErrorStatus,
-          message: config.timeoutErrorMessage,
-        });
+        reject(
+          new FetchError(
+            config.timeoutErrorMessage,
+            FetchErrorType.Timeout,
+            config.timeoutErrorStatus
+          )
+        );
       }, timeout);
     });
 
-    return Promise.race([fecthPromise, abortPromise]).then((res) => {
-      clearTimeout(tp);
-      return res;
-    }, (err) => {
-      clearTimeout(tp);
-      return Promise.reject(err);
-    });
+    return Promise.race([fecthPromise, abortPromise]).then(
+      (res) => {
+        clearTimeout(tp);
+        return res;
+      },
+      (err) => {
+        clearTimeout(tp);
+        return Promise.reject(err);
+      }
+    );
   }
 
   private core_ajax(mergedConfig: AjaxConfig): AjaxResult {
@@ -359,20 +356,24 @@ export class BaseAjax {
   private cache_ajax(cfg: AjaxConfig): AjaxResult {
     const mergedConfig = this.mergeConfig(cfg);
     const { cacheTimeout } = mergedConfig;
-    if (cacheTimeout === 0) { // 不缓存结果，也就是说不会过滤掉重复的请求
+    if (cacheTimeout === 0) {
+      // 不缓存结果，也就是说不会过滤掉重复的请求
       return this.core_ajax(mergedConfig);
     }
     const uniqueKey = this.getUniqueKey(mergedConfig);
     const caches = this.caches;
     if (!caches.has(uniqueKey)) {
       const result = this.core_ajax(mergedConfig);
-      result.promise = result.promise.then((res) => {
-        this.clearCacheByKey(uniqueKey, mergedConfig.cacheTimeout);
-        return res;
-      }, (err) => {
-        this.clearCacheByKey(uniqueKey, mergedConfig.cacheTimeout);
-        return Promise.reject(err);
-      });
+      result.promise = result.promise.then(
+        (res) => {
+          this.clearCacheByKey(uniqueKey, mergedConfig.cacheTimeout);
+          return res;
+        },
+        (err) => {
+          this.clearCacheByKey(uniqueKey, mergedConfig.cacheTimeout);
+          return Promise.reject(err);
+        }
+      );
       caches.set(uniqueKey, result);
     } else {
       if (mergedConfig.debug) {
@@ -386,7 +387,9 @@ export class BaseAjax {
     const { isOutStop } = cfg;
     if (!isOutStop && this.isAjaxStopped()) {
       return {
-        promise: Promise.reject(BaseAjax.defaults.stoppedErrorMessage),
+        promise: Promise.reject(
+          new FetchError(cfg.stoppedErrorMessage, FetchErrorType.Stop)
+        ),
         config: cfg,
       };
     }

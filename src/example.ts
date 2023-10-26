@@ -1,29 +1,4 @@
-import { BaseAjax } from "./index";
-
-export class Ajax extends BaseAjax {
-  /**
-   * 处理消息
-   */
-  protected handleMessage(msg: string) {
-    super.handleMessage(msg);
-
-    // your message code
-  }
-
-  /**
-   * 处理错误请求
-   */
-  protected handleErrorResponse(response: Response) {
-    console.error(
-      `HTTP error, status = ${response.status}, statusText = ${response.statusText}`,
-    );
-    if (response.status === 401) { //权限问题
-      this.stopAjax();
-      this.abortAll();
-      // toLogin();
-    }
-  }
-}
+import { Ajax } from "./index";
 
 Ajax.defaults.baseURL = "/api";
 
@@ -32,31 +7,40 @@ export const ajax = new Ajax();
 // export const post = ajax.post.bind(ajax);
 // export const request = ajax.ajax.bind(ajax);
 
-ajax.interceptors.request.use(function (config) {
-  config.headers = config.headers || {};
-  config.headers.token = "abcd";
-  return config;
-}, function (err) {
-  return Promise.reject(err);
-});
+ajax.interceptors.request.use(
+  function (config) {
+    config.headers = config.headers || {};
+    config.headers.token = "abcd";
+    return config;
+  },
+  function (err) {
+    return Promise.reject(err);
+  }
+);
 
-ajax.interceptors.response.use(function (data) {
-  return data.slice(0, 10);
-}, function (err) {
-  return Promise.reject(err);
-});
+ajax.interceptors.response.use(
+  function (data) {
+    return data.slice(0, 10);
+  },
+  function (err) {
+    console.log("err", err);
+    return Promise.reject(err);
+  }
+);
 
-const url = '/api/user/info';
+const url = "/api/user/info";
 const data = {
-  id: "aaa"
+  id: "aaa",
 };
-ajax.ajax<User>({
-  url,
-  method: 'post',
-  data
-}).then(res => console.log(res));
+ajax
+  .ajax<User>({
+    url,
+    method: "post",
+    data,
+  })
+  .then((res) => console.log(res));
 type User = {
   name: string;
-}
-ajax.get<User>(url, data).then(res => console.log(res));
-ajax.post<User>(url, data).then(res => console.log(res));
+};
+// ajax.get<User>(url, data).then((res) => console.log(res));
+// ajax.post<User>(url, data).then((res) => console.log(res));
